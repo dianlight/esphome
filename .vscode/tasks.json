@@ -4,22 +4,27 @@
     {
       "label": "Run Dashboard",
       "type": "shell",
-      "command": "${command:python.interpreterPath}",
-      "args": [
-        "-m",
-        "esphome",
-        "dashboard",
-        "config/"
-      ],
+      "command": "source ${workspaceFolder}/venv/bin/activate & ${command:python.interpreterPath}",
+      "args": ["-m", "esphome", "dashboard", "config/"],
       "problemMatcher": []
+    },
+    {
+      "label": "Run Dashboard DEVDASH",
+      "type": "shell",
+      "command": "source ${workspaceFolder}/venv/bin/activate & ${command:python.interpreterPath}",
+      "args": ["-m", "esphome", "dashboard", "config/"],
+      "problemMatcher": [],
+      "options": {
+        "env": {
+          "ESPHOME_DASHBOARD_DEV": "../dashboard"
+        }
+      }
     },
     {
       "label": "clang-tidy",
       "type": "shell",
       "command": "${command:python.interpreterPath}",
-      "args": [
-        "./script/clang-tidy"
-      ],
+      "args": ["./script/clang-tidy"],
       "problemMatcher": [
         {
           "owner": "clang-tidy",
@@ -41,9 +46,7 @@
       "label": "Generate proto files",
       "type": "shell",
       "command": "${command:python.interpreterPath}",
-      "args": [
-        "./script/api_protobuf/api_protobuf.py"
-      ],
+      "args": ["./script/api_protobuf/api_protobuf.py"],
       "group": {
         "kind": "build",
         "isDefault": true
