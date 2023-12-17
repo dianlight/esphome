@@ -180,7 +180,7 @@ async def to_code(config):
     #    cg.add_library("file:///Users/ltarantino/Documents/Sources/rtl_433_ESP",None)
 
     cg.add_library(
-        "git@github.com:dianlight/rtl_433_ESP-esphome.git#esphome_port", None
+        "https://github.com/dianlight/rtl_433_ESP-esphome.git#esphome_port", None
     )
 
     if CONF_CURRENT in config:
