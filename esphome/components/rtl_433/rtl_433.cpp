@@ -12,6 +12,7 @@ RTL433Component *__instance;
 
 void RTL433Component::rtl_433_Callback(char *message) {
   DynamicJsonDocument RFrtl_433_ESPdata(JSON_MSG_BUFFER);
+  char *org_message = strdupa(message);
   DeserializationError err = deserializeJson(RFrtl_433_ESPdata, message);
   if (err) {
     ESP_LOGW(TAG, "deserializeJson() failed :  %s [%s]", err.c_str(), message);
@@ -28,7 +29,7 @@ void RTL433Component::rtl_433_Callback(char *message) {
     }
   } else {
     if (RFrtl_433_ESPdata.containsKey("id")) {
-      ESP_LOGI(TAG, "Parserable: %s", message);
+      ESP_LOGI(TAG, "Parserable: %s", org_message);
       if (__instance->includes_.empty() ||
           std::find(__instance->includes_.begin(), __instance->includes_.end(),
                     RFrtl_433_ESPdata["id"].as<std::string>()) != __instance->includes_.end()) {
@@ -42,7 +43,7 @@ void RTL433Component::rtl_433_Callback(char *message) {
         }
       }
     } else {
-      ESP_LOGW(TAG, "Unparserable: %s", message);
+      ESP_LOGW(TAG, "Unparserable: %s", org_message);
     }
   }
 }
