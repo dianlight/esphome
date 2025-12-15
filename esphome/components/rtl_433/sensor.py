@@ -168,8 +168,8 @@ async def to_code(config):
     cg.add_build_flag("-DRF_MODULE_INIT_STATUS=true")
     cg.add_build_flag(f'-DRF_MODULE_CS={config.get(CONF_CS_PIN)["number"]}')
     cg.add_build_flag(f"-DRF_MODULE_FREQUENCY={config.get(CONF_FREQUENCY) / 1000000}")
-    cg.add_build_flag("-DRADIOLIB_LOW_LEVEL=false")
-    cg.add_build_flag("-DRADIOLIB_GODMODE=false")
+   # cg.add_build_flag("-DRADIOLIB_LOW_LEVEL=false")
+   # cg.add_build_flag("-DRADIOLIB_GODMODE=false")
 
     # cg.add_define('RADIOLIB_DEBUG','true')
 
