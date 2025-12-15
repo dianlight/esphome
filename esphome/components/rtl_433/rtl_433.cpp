@@ -11,7 +11,7 @@ static const char *const TAG = "rtl_433";
 RTL433Component *__instance;
 
 void RTL433Component::rtl_433_Callback(char *message) {
-  DynamicJsonDocument RFrtl_433_ESPdata(JSON_MSG_BUFFER);
+  JsonDocument RFrtl_433_ESPdata;
   char *org_message = strdupa(message);
   DeserializationError err = deserializeJson(RFrtl_433_ESPdata, message);
   if (err) {
@@ -28,7 +28,7 @@ void RTL433Component::rtl_433_Callback(char *message) {
         break;
     }
   } else {
-    if (RFrtl_433_ESPdata.containsKey("id")) {
+    if (!RFrtl_433_ESPdata["id"].is<JsonNull>()) {
       ESP_LOGI(TAG, "Parserable: %s", org_message);
       if (__instance->includes_.empty() ||
           std::find(__instance->includes_.begin(), __instance->includes_.end(),
