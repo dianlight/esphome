@@ -1,20 +1,24 @@
-import operator
+from collections.abc import Callable
 from functools import reduce
-import esphome.config_validation as cv
-from esphome.core import CORE, ID
+from logging import Logger
+import operator
+from typing import Any
 
+import esphome.config_validation as cv
 from esphome.const import (
+    CONF_ALLOW_OTHER_USES,
+    CONF_IGNORE_STRAPPING_WARNING,
     CONF_INPUT,
+    CONF_INVERTED,
     CONF_MODE,
     CONF_NUMBER,
     CONF_OPEN_DRAIN,
     CONF_OUTPUT,
     CONF_PULLDOWN,
     CONF_PULLUP,
-    CONF_IGNORE_STRAPPING_WARNING,
-    CONF_ALLOW_OTHER_USES,
-    CONF_INVERTED,
 )
+from esphome.core import CORE
+from esphome.cpp_generator import MockObjClass
 
 
 class PinRegistry(dict):
@@ -25,15 +29,16 @@ class PinRegistry(dict):
     def reset(self):
         self.pins_used = {}
 
-    def get_count(self, key, number):
+    def get_count(self, key, id, number):
         """
         Get the number of places a given pin is used.
-        :param key: The ID of the defining component
+        :param key: The key of the registered pin schema.
+        :param id: The ID of the defining component
         :param number: The pin number
         :return: The number of places the pin is used.
         """
-        pin_key = (key, number)
-        return self.pins_used[pin_key] if pin_key in self.pins_used else 0
+        pin_key = (key, id, number)
+        return len(self.pins_used[pin_key]) if pin_key in self.pins_used else 0
 
     def register(self, name, schema, final_validate=None):
         """
@@ -65,9 +70,10 @@ class PinRegistry(dict):
         result = self[key][1](conf)
         if CONF_NUMBER in result:
             # key maps to the pin schema
-            if isinstance(key, ID):
-                key = key.id
-            pin_key = (key, result[CONF_NUMBER])
+            if key != CORE.target_platform:
+                pin_key = (key, conf[key], result[CONF_NUMBER])
+            else:
+                pin_key = (key, key, result[CONF_NUMBER])
             if pin_key not in self.pins_used:
                 self.pins_used[pin_key] = []
             # client_id identifies the instance of the providing component
@@ -101,7 +107,7 @@ class PinRegistry(dict):
         Run the final validation for all pins, and check for reuse
         :param fconf: The full config
         """
-        for (key, _), pin_list in self.pins_used.items():
+        for (key, _, _), pin_list in self.pins_used.items():
             count = len(pin_list)  # number of places same pin used.
             final_val_fun = self[key][2]  # final validation function
             for pin_path, client_id, pin_config in pin_list:
@@ -112,11 +118,11 @@ class PinRegistry(dict):
                         parent_config = fconf.get_config_for_path(parent_path)
                         final_val_fun(pin_config, parent_config)
                     allow_others = pin_config.get(CONF_ALLOW_OTHER_USES, False)
-                    if count != 1 and not allow_others:
+                    if count != 1 and not allow_others and not CORE.testing_mode:
                         raise cv.Invalid(
                             f"Pin {pin_config[CONF_NUMBER]} is used in multiple places"
                         )
-                    if count == 1 and allow_others:
+                    if count == 1 and allow_others and not CORE.testing_mode:
                         raise cv.Invalid(
                             f"Pin {pin_config[CONF_NUMBER]} incorrectly sets {CONF_ALLOW_OTHER_USES}: true"
                         )
@@ -214,7 +220,9 @@ def gpio_flags_expr(mode):
 
 
 gpio_pin_schema = _schema_creator
-internal_gpio_pin_number = _internal_number_creator
+internal_gpio_pin_number = _internal_number_creator(
+    {CONF_OUTPUT: True, CONF_INPUT: True}
+)
 gpio_output_pin_schema = _schema_creator(
     {
         CONF_OUTPUT: True,
@@ -260,13 +268,13 @@ internal_gpio_input_pullup_pin_number = _internal_number_creator(
 )
 
 
-def check_strapping_pin(conf, strapping_pin_list, logger):
+def check_strapping_pin(conf, strapping_pin_list: set[int], logger: Logger):
     num = conf[CONF_NUMBER]
     if num in strapping_pin_list and not conf.get(CONF_IGNORE_STRAPPING_WARNING):
         logger.warning(
             f"GPIO{num} is a strapping PIN and should only be used for I/O with care.\n"
             "Attaching external pullup/down resistors to strapping pins can cause unexpected failures.\n"
-            "See https://esphome.io/guides/faq.html#why-am-i-getting-a-warning-about-strapping-pins",
+            "See https://esphome.io/guides/faq/#why-am-i-getting-a-warning-about-strapping-pins",
         )
     # mitigate undisciplined use of strapping:
     if num not in strapping_pin_list and conf.get(CONF_IGNORE_STRAPPING_WARNING):
@@ -289,11 +297,11 @@ def gpio_validate_modes(value):
 
 
 def gpio_base_schema(
-    pin_type,
-    number_validator,
+    pin_type: MockObjClass,
+    number_validator: Callable[[Any], Any],
     modes=GPIO_STANDARD_MODES,
-    mode_validator=gpio_validate_modes,
-    invertable=True,
+    mode_validator: Callable[[Any], Any] = gpio_validate_modes,
+    invertible: bool = True,
 ):
     """
     Generate a base gpio pin schema
@@ -301,7 +309,7 @@ def gpio_base_schema(
     :param number_validator: A validator for the pin number
     :param modes: The available modes, default is all standard modes
     :param mode_validator: A validator function for the pin mode
-    :param invertable: If the pin supports hardware inversion
+    :param invertible: If the pin supports hardware inversion
     :return: A schema for the pin
     """
     mode_default = len(modes) == 1
@@ -309,14 +317,24 @@ def gpio_base_schema(
         map(lambda m: (cv.Optional(m, default=mode_default), cv.boolean), modes)
     )
 
+    def _number_validator(value):
+        if isinstance(value, str) and value.upper().startswith("GPIOX"):
+            raise cv.Invalid(
+                f"Found placeholder '{value}' when expecting a GPIO pin number.\n"
+                "You must replace this with an actual pin number."
+            )
+        return number_validator(value)
+
     schema = cv.Schema(
         {
             cv.GenerateID(): cv.declare_id(pin_type),
-            cv.Required(CONF_NUMBER): number_validator,
+            cv.Required(CONF_NUMBER): _number_validator,
             cv.Optional(CONF_ALLOW_OTHER_USES): cv.boolean,
             cv.Optional(CONF_MODE, default={}): cv.All(mode_dict, mode_validator),
         }
     )
-    if invertable:
+
+    if invertible:
         return schema.extend({cv.Optional(CONF_INVERTED, default=False): cv.boolean})
+
     return schema

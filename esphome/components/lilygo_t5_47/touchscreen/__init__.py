@@ -1,8 +1,7 @@
-import esphome.codegen as cg
-import esphome.config_validation as cv
-
 from esphome import pins
+import esphome.codegen as cg
 from esphome.components import i2c, touchscreen
+import esphome.config_validation as cv
 from esphome.const import CONF_ID, CONF_INTERRUPT_PIN
 
 from .. import lilygo_t5_47_ns
@@ -18,7 +17,7 @@ LilygoT547Touchscreen = lilygo_t5_47_ns.class_(
 
 CONF_LILYGO_T5_47_TOUCHSCREEN_ID = "lilygo_t5_47_touchscreen_id"
 
-CONFIG_SCHEMA = touchscreen.TOUCHSCREEN_SCHEMA.extend(
+CONFIG_SCHEMA = touchscreen.touchscreen_schema("250ms").extend(
     cv.Schema(
         {
             cv.GenerateID(): cv.declare_id(LilygoT547Touchscreen),

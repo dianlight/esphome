@@ -47,13 +47,12 @@ struct TT21100TouchReport {
 float TT21100Touchscreen::get_setup_priority() const { return setup_priority::HARDWARE - 1.0f; }
 
 void TT21100Touchscreen::setup() {
-  ESP_LOGCONFIG(TAG, "Setting up TT21100 Touchscreen...");
-
   // Register interrupt pin
-  this->interrupt_pin_->pin_mode(gpio::FLAG_INPUT | gpio::FLAG_PULLUP);
-  this->interrupt_pin_->setup();
-
-  this->attach_interrupt_(this->interrupt_pin_, gpio::INTERRUPT_FALLING_EDGE);
+  if (this->interrupt_pin_ != nullptr) {
+    this->interrupt_pin_->pin_mode(gpio::FLAG_INPUT | gpio::FLAG_PULLUP);
+    this->interrupt_pin_->setup();
+    this->attach_interrupt_(this->interrupt_pin_, gpio::INTERRUPT_FALLING_EDGE);
+  }
 
   // Perform reset if necessary
   if (this->reset_pin_ != nullptr) {
@@ -62,8 +61,17 @@ void TT21100Touchscreen::setup() {
   }
 
   // Update display dimensions if they were updated during display setup
-  this->x_raw_max_ = this->get_width_();
-  this->y_raw_max_ = this->get_height_();
+  if (this->display_ != nullptr) {
+    if (this->x_raw_max_ == this->x_raw_min_) {
+      this->x_raw_max_ = this->display_->get_native_width();
+    }
+    if (this->y_raw_max_ == this->y_raw_min_) {
+      this->y_raw_max_ = this->display_->get_native_height();
+    }
+  }
+
+  // Trigger initial read to activate the interrupt
+  this->store_.touched = true;
 }
 
 void TT21100Touchscreen::update_touches() {
@@ -109,7 +117,7 @@ void TT21100Touchscreen::update_touches() {
                  i, touch->touch_type, touch->tip, touch->event_id, touch->touch_id, touch->x, touch->y,
                  touch->pressure, touch->major_axis_length, touch->orientation);
 
-        this->set_raw_touch_position_(touch->tip, touch->x, touch->y, touch->pressure);
+        this->add_raw_touch_position_(touch->tip, touch->x, touch->y, touch->pressure);
       }
     }
   }
