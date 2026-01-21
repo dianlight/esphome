@@ -12,6 +12,14 @@ static const uint32_t BIT_LONG_US = 136;
 static const uint32_t SYNC_US = 500;
 static const uint32_t GAP_LIMIT_US = 200;
 
+// Exponent range constants
+static const uint8_t EXPONENT_MIN = 7;            // Minimum valid exponent value
+static const uint8_t EXPONENT_MAX = 23;           // Maximum valid exponent value
+static const uint8_t EXPONENT_SEARCH_LIMIT = 20;  // Maximum iterations when finding exponent
+
+// Data validation constants
+static const uint8_t MAX_ZERO_BYTES = 5;  // Maximum allowed zero bytes before rejecting packet
+
 static uint8_t add_bytes(const uint8_t *bytes, uint8_t len) {
   uint16_t sum = 0;
   for (uint8_t i = 0; i < len; i++) {
@@ -39,7 +47,7 @@ void EfergyE2ClassicProtocol::encode(RemoteTransmitData *dst, const EfergyE2Clas
   float current_val = data.current;
 
   // Find appropriate exponent (values between -3 and 4)
-  for (exponent = 0; exponent < 20; exponent++) {
+  for (exponent = 0; exponent < EXPONENT_SEARCH_LIMIT; exponent++) {
     float divisor = (1 << (15 - exponent));
     if (current_val * divisor < 65536.0f) {
       break;
@@ -140,7 +148,7 @@ optional<EfergyE2ClassicData> EfergyE2ClassicProtocol::decode(RemoteReceiveData 
       zero_count++;
     }
   }
-  if (zero_count > 5) {
+  if (zero_count > MAX_ZERO_BYTES) {
     return {};
   }
 
@@ -160,7 +168,7 @@ optional<EfergyE2ClassicData> EfergyE2ClassicProtocol::decode(RemoteReceiveData 
   out.battery = (bytes[3] & 0x40) >> 6;
 
   uint8_t fact = 15 - bytes[6];
-  if (fact < 7 || fact > 23) {
+  if (fact < EXPONENT_MIN || fact > EXPONENT_MAX) {
     return {};  // Invalid exponent
   }
 
