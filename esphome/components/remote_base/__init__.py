@@ -671,24 +671,6 @@ EFERGY_E2_CLASSIC_SCHEMA = cv.Schema(
 )
 
 
-@register_binary_sensor(
-    "efergy_e2_classic", EfergyE2ClassicBinarySensor, EFERGY_E2_CLASSIC_SCHEMA
-)
-def efergy_e2_classic_binary_sensor(var, config):
-    cg.add(
-        var.set_data(
-            cg.StructInitializer(
-                EfergyE2ClassicData,
-                ("address", config[CONF_ADDRESS]),
-                ("learn", config[CONF_LEARN]),
-                ("interval", config[CONF_INTERVAL]),
-                ("battery", config[CONF_BATTERY]),
-                ("current", config[CONF_CURRENT]),
-            )
-        )
-    )
-
-
 @register_trigger("efergy_e2_classic", EfergyE2ClassicTrigger, EfergyE2ClassicData)
 def efergy_e2_classic_trigger(var, config):
     pass
