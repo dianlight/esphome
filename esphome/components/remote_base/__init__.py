@@ -48,6 +48,8 @@ AUTO_LOAD = ["binary_sensor"]
 CONF_RECEIVER_ID = "receiver_id"
 CONF_TRANSMITTER_ID = "transmitter_id"
 CONF_FIRST = "first"
+CONF_LEARN = "learn"
+CONF_BATTERY = "battery"
 
 ns = remote_base_ns = cg.esphome_ns.namespace("remote_base")
 RemoteProtocol = ns.class_("RemoteProtocol")
@@ -645,6 +647,68 @@ async def dyson_action(var, config, args):
     cg.add(var.set_code(template_))
     template_ = await cg.templatable(config[CONF_INDEX], args, cg.uint8)
     cg.add(var.set_index(template_))
+
+
+# Efergy E2 Classic
+(
+    EfergyE2ClassicData,
+    EfergyE2ClassicBinarySensor,
+    EfergyE2ClassicTrigger,
+    EfergyE2ClassicAction,
+    EfergyE2ClassicDumper,
+) = declare_protocol("EfergyE2Classic")
+
+EFERGY_E2_CLASSIC_SCHEMA = cv.Schema(
+    {
+        cv.Required(CONF_ADDRESS): cv.hex_uint16_t,
+        cv.Optional(CONF_LEARN, default=0): cv.int_range(min=0, max=1),
+        cv.Optional(CONF_INTERVAL, default=6): cv.one_of(6, 12, 18, 24, int=True),
+        cv.Optional(CONF_BATTERY, default=1): cv.int_range(min=0, max=1),
+        cv.Required(CONF_CURRENT): cv.float_,
+    }
+)
+
+
+@register_binary_sensor(
+    "efergy_e2_classic", EfergyE2ClassicBinarySensor, EFERGY_E2_CLASSIC_SCHEMA
+)
+def efergy_e2_classic_binary_sensor(var, config):
+    cg.add(
+        var.set_data(
+            cg.StructInitializer(
+                EfergyE2ClassicData,
+                ("address", config[CONF_ADDRESS]),
+                ("learn", config[CONF_LEARN]),
+                ("interval", config[CONF_INTERVAL]),
+                ("battery", config[CONF_BATTERY]),
+                ("current", config[CONF_CURRENT]),
+            )
+        )
+    )
+
+
+@register_trigger("efergy_e2_classic", EfergyE2ClassicTrigger, EfergyE2ClassicData)
+def efergy_e2_classic_trigger(var, config):
+    pass
+
+
+@register_dumper("efergy_e2_classic", EfergyE2ClassicDumper)
+def efergy_e2_classic_dumper(var, config):
+    pass
+
+
+@register_action("efergy_e2_classic", EfergyE2ClassicAction, EFERGY_E2_CLASSIC_SCHEMA)
+async def efergy_e2_classic_action(var, config, args):
+    template_ = await cg.templatable(config[CONF_ADDRESS], args, cg.uint16)
+    cg.add(var.set_address(template_))
+    template_ = await cg.templatable(config[CONF_LEARN], args, cg.uint8)
+    cg.add(var.set_learn(template_))
+    template_ = await cg.templatable(config[CONF_INTERVAL], args, cg.uint8)
+    cg.add(var.set_interval(template_))
+    template_ = await cg.templatable(config[CONF_BATTERY], args, cg.uint8)
+    cg.add(var.set_battery(template_))
+    template_ = await cg.templatable(config[CONF_CURRENT], args, cg.float_)
+    cg.add(var.set_current(template_))
 
 
 # JVC
