@@ -180,14 +180,11 @@ async def to_code(config):
 
     cg.add_library("SPI", None)
 
-    #    cg.add_library("https://github.com/NorthernMan54/rtl_433_ESP.git#3fea1cf",None)
-    #    cg.add_library("jgromes/RadioLib", "5.6.0")
+    # cg.add_library("file:///Users/ltarantino/Documents/Sources/rtl_433_ESP", None)
 
-    cg.add_library("file:///Users/ltarantino/Documents/Sources/rtl_433_ESP", None)
-
-    # cg.add_library(
-    #    "https://github.com/dianlight/rtl_433_ESP-esphome.git#esphome_port", None
-    # )
+    cg.add_library(
+        "https://github.com/dianlight/rtl_433_ESP-esphome.git#esphome_port", None
+    )
 
     if CONF_CURRENT in config:
         conf = config[CONF_CURRENT]
