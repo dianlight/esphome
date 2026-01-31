@@ -28,7 +28,7 @@ void RTL433Component::rtl_433_Callback(char *message) {
         break;
     }
   } else {
-    if (!RFrtl_433_ESPdata["id"].is<JsonVariant>()) {
+    if (RFrtl_433_ESPdata["id"].is<JsonVariant>()) {
       ESP_LOGI(TAG, "Parserable: %s", org_message);
       if (__instance->includes_.empty() ||
           std::find(__instance->includes_.begin(), __instance->includes_.end(),
