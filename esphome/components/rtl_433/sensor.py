@@ -1,23 +1,23 @@
-import esphome.codegen as cg
-import esphome.config_validation as cv
-from esphome.components import sensor
-
 # from esphome.components import spi
 from esphome import pins
+import esphome.codegen as cg
+from esphome.components import sensor
+import esphome.config_validation as cv
 from esphome.const import (
-    CONF_DEVICE,
-    CONF_DATA_PINS,
-    CONF_INCLUDES,
-    CONF_MODE,
-    CONF_FREQUENCY,
+    CONF_BATTERY_LEVEL,
+    CONF_CLK_PIN,
     CONF_CS_PIN,
+    CONF_CURRENT,
+    CONF_DATA_PINS,
+    CONF_DEVICE,
+    CONF_FREQUENCY,
+    CONF_ID,
+    CONF_INCLUDES,
+    CONF_MISO_PIN,
+    CONF_MODE,
+    CONF_MOSI_PIN,
     CONF_POWER,
     CONF_RESET_PIN,
-    CONF_CLK_PIN,
-    CONF_MISO_PIN,
-    CONF_ID,
-    CONF_MOSI_PIN,
-    CONF_CURRENT,
     DEVICE_CLASS_BATTERY,
     DEVICE_CLASS_CURRENT,
     DEVICE_CLASS_POWER,
@@ -25,7 +25,6 @@ from esphome.const import (
     UNIT_AMPERE,
     UNIT_PERCENT,
     UNIT_WATT,
-    CONF_BATTERY_LEVEL,
 )
 
 # from esphome.core import CORE
@@ -114,7 +113,7 @@ async def to_code(config):
     # define RADIOLIB_EXCLUDE_SX126X
     # define RADIOLIB_EXCLUDE_STM32WLX   // dependent on RADIOLIB_EXCLUDE_SX126X
     cg.add_build_flag("-DRADIOLIB_EXCLUDE_SX128X")
-    cg.add_build_flag("-DRADIOLIB_EXCLUDE_AFSK")
+    # cg.add_build_flag("-DRADIOLIB_EXCLUDE_AFSK")
     # cg.add_build_flag("-DRADIOLIB_EXCLUDE_APRS")
     # cg.add_build_flag("-DRADIOLIB_EXCLUDE_PAGER")
     # cg.add_build_flag("-DRADIOLIB_EXCLUDE_AX25")
@@ -124,16 +123,20 @@ async def to_code(config):
     cg.add_build_flag("-DRADIOLIB_EXCLUDE_SSTV")
     # cg.add_build_flag("-DRADIOLIB_EXCLUDE_DIRECT_RECEIVE")
 
-    cg.add_build_flag("-std=gnu++17")
+    # Set LOW LEVEL RADIO LIB
+    cg.add_build_flag("-DRADIOLIB_LOW_LEVEL=1")
+    # cg.add_build_flag("-DRADIOLIB_GODMODE=true")
 
-    cg.add_build_flag(f'-DRF_MODULE_MOSI={config.get(CONF_MOSI_PIN)["number"]}')
-    cg.add_build_flag(f'-DRF_MODULE_MISO={config.get(CONF_MISO_PIN)["number"]}')
-    cg.add_build_flag(f'-DRF_MODULE_SCK={config.get(CONF_CLK_PIN)["number"]}')
+    # Set C++ standard to C++17
+    # cg.add_build_flag("-std=gnu++17")
+
+    cg.add_build_flag(f"-DRF_MODULE_MOSI={config.get(CONF_MOSI_PIN)['number']}")
+    cg.add_build_flag(f"-DRF_MODULE_MISO={config.get(CONF_MISO_PIN)['number']}")
+    cg.add_build_flag(f"-DRF_MODULE_SCK={config.get(CONF_CLK_PIN)['number']}")
 
     # Clean RTL433 DEBUG
     # cg.add_build_flag("-DRTL_DEBUG=3")
     cg.add_build_flag("-DRAW_SIGNAL_DEBUG=false")
-    #
 
     # cg.add_define("STR_MODULE",config.get(CONF_DEVICE))
     # match config.get(CONF_DEVICE):
@@ -148,11 +151,11 @@ async def to_code(config):
     device = config.get(CONF_DEVICE)
     cg.add_build_flag(f'-DRF_{device}="{device}"')
     if led_pin := config.get(CONF_LED_PIN):
-        cg.add_build_flag(f'-DONBOARD_LED={led_pin["number"]}')
+        cg.add_build_flag(f"-DONBOARD_LED={led_pin['number']}")
     cg.add_build_flag("-DPUBLISH_UNPARSED=true")
     if rssi_threshold := config.get(CONF_THRESHOLD_RSSI):
         cg.add_build_flag(f"-DRSSI_THRESHOLD={rssi_threshold}")
-    cg.add_build_flag(f'-DOOK_MODULATION={str(config.get(CONF_MODE) == "OOK").lower()}')
+    cg.add_build_flag(f"-DOOK_MODULATION={str(config.get(CONF_MODE) == 'OOK').lower()}")
     cg.add_build_flag("-DSIGNAL_RSSI=true")
 
     if config.get(CONF_DEVICE) == "CC1101":
@@ -163,13 +166,13 @@ async def to_code(config):
             cg.add_build_flag(f"-DRF_MODULE_DIO{idx}={conf}")
 
     if CONF_RESET_PIN in config:
-        cg.add_build_flag(f'-DRF_MODULE_RST={config.get(CONF_RESET_PIN)["number"]}')
+        cg.add_build_flag(f"-DRF_MODULE_RST={config.get(CONF_RESET_PIN)['number']}")
 
     cg.add_build_flag("-DRF_MODULE_INIT_STATUS=true")
-    cg.add_build_flag(f'-DRF_MODULE_CS={config.get(CONF_CS_PIN)["number"]}')
+    cg.add_build_flag(f"-DRF_MODULE_CS={config.get(CONF_CS_PIN)['number']}")
     cg.add_build_flag(f"-DRF_MODULE_FREQUENCY={config.get(CONF_FREQUENCY) / 1000000}")
-   # cg.add_build_flag("-DRADIOLIB_LOW_LEVEL=false")
-   # cg.add_build_flag("-DRADIOLIB_GODMODE=false")
+    # cg.add_build_flag("-DRADIOLIB_LOW_LEVEL=false")
+    cg.add_build_flag("-DRADIOLIB_GODMODE=false")
 
     # cg.add_define('RADIOLIB_DEBUG','true')
 
@@ -180,11 +183,11 @@ async def to_code(config):
     #    cg.add_library("https://github.com/NorthernMan54/rtl_433_ESP.git#3fea1cf",None)
     #    cg.add_library("jgromes/RadioLib", "5.6.0")
 
-    #    cg.add_library("file:///Users/ltarantino/Documents/Sources/rtl_433_ESP",None)
+    cg.add_library("file:///Users/ltarantino/Documents/Sources/rtl_433_ESP", None)
 
-    cg.add_library(
-        "https://github.com/dianlight/rtl_433_ESP-esphome.git#esphome_port", None
-    )
+    # cg.add_library(
+    #    "https://github.com/dianlight/rtl_433_ESP-esphome.git#esphome_port", None
+    # )
 
     if CONF_CURRENT in config:
         conf = config[CONF_CURRENT]
